@@ -1,6 +1,16 @@
 {
  "_doc": "Referentiel Strava lu par scripts/audit_reconciliation.py et scripts/audit_data.py. A mettre a jour a chaque seance loggee (voir docs/ENRICHISSEMENT.md).",
  "activites": {
+  "2026-10-13": [
+   15.0396,
+   206,
+   165
+  ],
+  "2026-10-12": [
+   10.0517,
+   137,
+   26
+  ],
   "2026-10-09": [
    30.1269,
    281,
@@ -293,10 +303,10 @@
   ]
  },
  "chaussures": {
-  "Clifton 10": 1229,
+  "Clifton 10": 1239,
   "Gel Pulse 16": 229,
   "Cascadia 19": 259,
-  "Novablast 5 J": 818,
+  "Novablast 5 J": 833,
   "Magic Speed 4": 93,
   "Novablast 5 V": 172
  },
