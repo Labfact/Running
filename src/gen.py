@@ -2655,6 +2655,7 @@ CHANGELOG=[
     "CORRIGE : le recit de 'Ton capital' restait fige sur 'Lyon -> Barcelone' (532 km) alors que 830 km sont courus ; jalons ajoutes (Munich, Rome, Madrid, Berlin, Lisbonne). Prochain : Madrid, a 82 km.",
     "CORRIGE : la phrase 'Plus que X km pour l'aller-retour' s'affichait quel que soit le jalon suivant ; elle nomme maintenant la destination.",
     "AJUSTE : le compteur '16 semaines' est libelle 'sem. courues' (semaines avec au moins une sortie, pas une serie).",
+    "AJUSTE : 'Ton capital' reste calcule sur la prepa (depuis le 15 juin, choix de Loic, la saison comptant plusieurs courses) ; la phrase Everest le dit maintenant : 'depuis le debut de la prepa (15 juin)'.",
     "VERIFIE : 830 km, 435 records, 67 % de l'Everest et 16 semaines concordent avec les seances loggees ; debugCockpit() controle desormais ces chiffres.",
   ]},
   {"build":251,"date":"15 octobre 2026","sha":"","tag":"Audit du Cockpit : graphe d'allure par type corrige, allure facile fiabilisee, debugCockpit()","items":[

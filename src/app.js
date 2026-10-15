@@ -998,7 +998,7 @@ function _wCapital(nb,km,sem,pr,dplus){
     +'<div class="cap-c"><b>'+sem+'<i>\u{1F525}</i></b><span>sem. courues</span></div>'
     +'</div>'+recit
     +(everest>=10?'<div class="cap-recit cap-recit-2"><span class="cap-recit-i">\u26F0\uFE0F</span>'
-      +'<span><strong>'+everest+' %</strong> de l\u2019Everest grimp\u00e9s depuis le d\u00e9but</span></div>':'')
+      +'<span><strong>'+everest+' %</strong> de l\u2019Everest grimp\u00e9s depuis le d\u00e9but de la pr\u00e9pa (15 juin)</span></div>':'')
     +'</div>';
 }
 function _wMeteo(){
