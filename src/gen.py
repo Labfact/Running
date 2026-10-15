@@ -2419,6 +2419,18 @@ _TOT_EL  = sum(_m["elev"] for _m in MONTHLY)
 _TOT_SO  = sum(_m["sorties"] for _m in MONTHLY)
 SAISON2026 = {"km":_TOT_KM, "elev":_TOT_EL, "sorties":_TOT_SO, "mois":len(MONTHLY),
   "note":"Course à pied uniquement (Run + Trail) · randonnées, raquettes et vélo exclus · mois en cours recalculé automatiquement à chaque build"}
+# Records Strava (pr_count, Run + Trail) du 1er janvier au 14 juin 2026, AVANT le plan de preparation
+# (releves sur Strava le 15/10/2026 : 109 sorties, 1537 records). Le plan en ajoute ensuite, seance par
+# seance, via realise.pr. 109 + 63 sorties du plan = 172 = SAISON2026["sorties"] (controle croise).
+SAISON2026["pr_avant_plan"] = 1537
+SAISON2026["pr_top_avant_plan"] = [
+  {"d":"2026-03-18","t":"Course à pied dans l'après-midi","km":10.36,"al":"4:38/km","pr":85},
+  {"d":"2026-05-20","t":"Course à pied le matin","km":10.03,"al":"4:43/km","pr":69},
+  {"d":"2026-03-10","t":"Course à pied rejoint par Perrine au parc","km":16.04,"al":"6:03/km","pr":61},
+  {"d":"2026-03-24","t":"Course à pied rejoint par Perrine au parc","km":30.11,"al":"5:42/km","pr":56},
+  {"d":"2026-01-21","t":"Course à pied dans l'après-midi","km":21.13,"al":"5:35/km","pr":44},
+  {"d":"2026-03-09","t":"Course à pied le matin","km":17.02,"al":"5:55/km","pr":42},
+]
 print("MONTHLY calcule :", _TOT_KM, "km |", _TOT_SO, "sorties |", _TOT_EL, "m")
 
 # Progression d'efficience aérobie par saison — points d'ancrage réels (cardio Strava, EF route, allure ramenée à 145 bpm).
@@ -2651,12 +2663,12 @@ for _wk,_ss in SEANCES_BY_WEEK.items():
         if _r.get("statut") in ("fait","partiel") and _r.get("km") and _se.get("date"):
             HEATMAP[_se["date"]]=HEATMAP.get(_se["date"],0)+_r["km"]
 CHANGELOG=[
-  {"build":252,"date":"15 octobre 2026","sha":"","tag":"Ton capital : le recit avance au-dela de Barcelone","items":[
-    "CORRIGE : le recit de 'Ton capital' restait fige sur 'Lyon -> Barcelone' (532 km) alors que 830 km sont courus ; jalons ajoutes (Munich, Rome, Madrid, Berlin, Lisbonne). Prochain : Madrid, a 82 km.",
-    "CORRIGE : la phrase 'Plus que X km pour l'aller-retour' s'affichait quel que soit le jalon suivant ; elle nomme maintenant la destination.",
-    "AJUSTE : le compteur '16 semaines' est libelle 'sem. courues' (semaines avec au moins une sortie, pas une serie).",
-    "AJUSTE : 'Ton capital' reste calcule sur la prepa (depuis le 15 juin, choix de Loic, la saison comptant plusieurs courses) ; la phrase Everest le dit maintenant : 'depuis le debut de la prepa (15 juin)'.",
-    "VERIFIE : 830 km, 435 records, 67 % de l'Everest et 16 semaines concordent avec les seances loggees ; debugCockpit() controle desormais ces chiffres.",
+  {"build":252,"date":"15 octobre 2026","sha":"","tag":"Ton capital : toute la saison depuis le 1er janvier","items":[
+    "CORRIGE : 'Ton capital' ne comptait que depuis le debut de la prepa (15 juin : 830 km, 63 sorties). Il couvre maintenant l'annee depuis le 1er janvier : 2201 km, 172 sorties, 22185 m de D+ (SAISON2026, verifie sur Strava).",
+    "AJOUTE : records Strava du 1er janvier au 14 juin (1537, releves sur Strava) ajoutes aux records du plan : total 1972. La fiche Records suit et liste aussi les meilleures seances d'avant la prepa.",
+    "CORRIGE : le recit etait fige sur 'Lyon -> Barcelone' (532 km) ; jalons ajoutes jusqu'a Le Caire (Munich, Rome, Madrid, Berlin, Lisbonne, Athenes, Istanbul, Helsinki, Moscou, Reykjavik). A 2201 km : Helsinki, prochain Moscou.",
+    "CORRIGE : la phrase 'Plus que X km pour l'aller-retour' s'affichait quel que soit le jalon suivant ; elle nomme maintenant la destination. Le compteur de semaines devient un compteur de sorties.",
+    "VERIFIE : debugCockpit() controle ces chiffres (km, sorties, records, Everest) contre les donnees.",
   ]},
   {"build":251,"date":"15 octobre 2026","sha":"","tag":"Audit du Cockpit : graphe d'allure par type corrige, allure facile fiabilisee, debugCockpit()","items":[
     "AUDIT : volume, charge, D+, cadence, ACWR (hebdo et du jour), zones FC et fatigue recalcules a part depuis les donnees brutes : tous concordent avec l'ecran.",

@@ -859,7 +859,10 @@ document.getElementById('hero-plan').innerHTML=
   _lt+_psCard+_conseil+_wnCard+_formeDetail
     +'<div id="wdg-meteo-slot">'+_wMeteo()+'</div>'
   +_wPrepa(_COURSES_,_PCT_,_NB_,_KM_,_SEMOK_,sc.num)
-  +_wCapital(_NB_,_KM_,_SEMOK_,_PR_,_DPLUS_)
+  /* 15/10 : « Ton capital » couvre la SAISON (depuis le 1er janvier, plusieurs courses dans l'annee) et non
+     plus la seule prepa (15 juin) : SAISON2026 pour km / sorties / D+, records = avant-plan + plan. */
+  +(function(){var SA=(typeof SAISON2026!=='undefined')?SAISON2026:null;
+     return _wCapital(SA?SA.sorties:_NB_,SA?SA.km:_KM_,SA?SA.sorties:_NB_,_PR_+((SA&&SA.pr_avant_plan)||0),SA?SA.elev:_DPLUS_);})()
   
   +'<div id="canicule-banner" style="display:none!important"></div>'
   +'<div id="meteo-widget" class="meteo" style="display:none"><div class="meteo-loc">⏳</div></div>';
@@ -968,7 +971,8 @@ var _JALONS=[
   {km:392,nom:'Nice aller-retour',ar:true},{km:532,nom:'Barcelone'},
   /* Audit du 15/10 : la liste s'arretait a Barcelone (532 km), franchi depuis des semaines : a 830 km
      le recit restait fige sur la meme phrase. Distances a vol d'oiseau depuis Lyon. */
-  {km:575,nom:'Munich'},{km:749,nom:'Rome'},{km:912,nom:'Madrid'},{km:975,nom:'Berlin'},{km:1388,nom:'Lisbonne'}
+  {km:575,nom:'Munich'},{km:749,nom:'Rome'},{km:912,nom:'Madrid'},{km:975,nom:'Berlin'},{km:1388,nom:'Lisbonne'},
+  {km:1781,nom:'Ath\u00e8nes'},{km:2013,nom:'Istanbul'},{km:2075,nom:'Helsinki'},{km:2528,nom:'Moscou'},{km:2624,nom:'Reykjavik'},{km:2879,nom:'Le Caire'}
 ];
 function _wCapital(nb,km,sem,pr,dplus){
   var atteints=_JALONS.filter(function(j){return km>=j.km;});
@@ -990,15 +994,17 @@ function _wCapital(nb,km,sem,pr,dplus){
       +'<span>Encore <strong>'+Math.round(suivant.km-km)+' km</strong> pour atteindre Lyon \u2192 '+suivant.nom+'</span></div>';
   }
   var everest=Math.round(dplus/8849*100);
+  var evTxt=dplus>=8849?'<strong>'+(dplus/8849).toFixed(1).replace('.',',')+' fois</strong> l\u2019Everest grimp\u00e9 depuis le 1er janvier'
+                       :'<strong>'+everest+' %</strong> de l\u2019Everest grimp\u00e9s depuis le 1er janvier';
   return '<div class="wdg wdg-cap">'
     +'<div class="cap-h">Ton capital</div>'
     +'<div class="cap-grid">'
-    +'<div class="cap-c"><b>'+Math.round(km)+'</b><span>km courus</span></div>'
+    +'<div class="cap-c"><b>'+Math.round(km)+'</b><span>km en 2026</span></div>'
     +'<button class="cap-c cap-c-btn" onclick="event.stopPropagation();_ouvrirRecords()"><b>'+pr+'</b><span>records \u203a</span></button>'
-    +'<div class="cap-c"><b>'+sem+'<i>\u{1F525}</i></b><span>sem. courues</span></div>'
+    +'<div class="cap-c"><b>'+sem+'</b><span>sorties</span></div>'
     +'</div>'+recit
     +(everest>=10?'<div class="cap-recit cap-recit-2"><span class="cap-recit-i">\u26F0\uFE0F</span>'
-      +'<span><strong>'+everest+' %</strong> de l\u2019Everest grimp\u00e9s depuis le d\u00e9but de la pr\u00e9pa (15 juin)</span></div>':'')
+      +'<span>'+evTxt+'</span></div>':'')
     +'</div>';
 }
 function _wMeteo(){
@@ -1067,9 +1073,11 @@ function _ouvrirRecords(){
         var r=s.realise;
         if(r&&(r.pr||0)>0)S.push({d:s.date,t:s.titre||s.type,pr:r.pr,km:r.km,al:r.allure});});
     });
+    /* seances d'avant la prepa (1er janvier -> 14 juin), releves Strava */
+    ((typeof SAISON2026!=='undefined'&&SAISON2026.pr_top_avant_plan)||[]).forEach(function(x){S.push({d:x.d,t:x.t,pr:x.pr,km:x.km,al:x.al});});
     S.sort(function(a,b){return b.pr-a.pr||(a.d<b.d?1:-1);});
   }catch(e){}
-  var total=S.reduce(function(a,x){return a+x.pr;},0);
+  var total=S.reduce(function(a,x){return a+x.pr;},0)+((typeof SAISON2026!=='undefined'&&SAISON2026.pr_avant_plan)||0)-(((typeof SAISON2026!=='undefined'&&SAISON2026.pr_top_avant_plan)||[]).reduce(function(a,x){return a+x.pr;},0));
   var top=S.slice(0,6).map(function(x){
     var dt=x.d?new Date(x.d+'T00:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}):'';
     return '<div class="rec-row"><span class="rec-row-n">'+x.pr+'</span>'
@@ -1080,7 +1088,7 @@ function _ouvrirRecords(){
     +'<div class="rec-burst" id="rec-burst"></div>'
     +'<div class="rec-hero"><div class="rec-hero-n">'+total+'</div>'
     +'<div class="rec-hero-l">records personnels</div>'
-    +'<div class="rec-hero-s">battus depuis le d\u00e9but de ta pr\u00e9paration</div></div>'
+    +'<div class="rec-hero-s">battus depuis le 1er janvier</div></div>'
     +(refs?'<div class="rec-sec">Tes r\u00e9f\u00e9rences</div><div class="rec-refs">'+refs+'</div>':'')
     +(top?'<div class="rec-sec">Tes s\u00e9ances les plus prolifiques</div>'+top:'')
     +'<p class="rec-note">Un record Strava, c\u2019est ton meilleur temps sur un segment ou une distance. '
@@ -2972,10 +2980,12 @@ function debugCockpit(opt){
     if(capEl){var cb=capEl.querySelectorAll('b');
       var ckm=0,cpr=0,cdp=0,cw={};faites.forEach(function(x){var r=x.s.realise;ckm+=r.km;cw[x.wk]=1;});
       all.forEach(function(x){var r=x.s.realise;if(r&&(r.statut==='fait'||r.statut==='partiel')){cpr+=(r.pr||0);cdp+=(r.elevation_gain||0);}});
-      chk('Capital : km courus',+cb[0].textContent,Math.round(ckm),0.5);
-      chk('Capital : records',parseInt(cb[1].textContent,10),cpr,0);
-      chk('Capital : semaines courues',parseInt(cb[2].textContent,10),Object.keys(cw).length,0);
-      var ev=document.querySelector('.cap-recit-2 strong');if(ev)chk('Capital : % Everest',parseInt(ev.textContent,10),Math.round(cdp/8849*100),0);}}catch(e){}
+      var SA=(typeof SAISON2026!=='undefined')?SAISON2026:null;
+      chk('Capital : km en 2026',+cb[0].textContent,SA?Math.round(SA.km):Math.round(ckm),0.5);
+      chk('Capital : records',parseInt(cb[1].textContent,10),cpr+((SA&&SA.pr_avant_plan)||0),0);
+      chk('Capital : sorties',parseInt(cb[2].textContent,10),SA?SA.sorties:Object.keys(cw).length,0);
+      var ev=document.querySelector('.cap-recit-2 strong');
+      if(ev&&SA){var evv=parseFloat(String(ev.textContent).replace(',','.'));chk('Capital : Everest',SA.elev>=8849?evv:evv/100,+(SA.elev/8849).toFixed(1),0.06);}}}catch(e){}
   /* --- 5. Fraicheur des donnees --- */
   var dates=faites.filter(function(x){return x.s.date;}).map(function(x){return x.s.date;}).sort();
   var derniere=dates[dates.length-1];
