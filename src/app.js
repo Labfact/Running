@@ -965,7 +965,10 @@ function _meteoPaint(d){
 var _JALONS=[
   {km:94,nom:'Grenoble'},{km:112,nom:'Genève'},
   {km:278,nom:'Marseille'},{km:298,nom:'Nice',cible:true},
-  {km:392,nom:'Nice aller-retour',ar:true},{km:532,nom:'Barcelone'}
+  {km:392,nom:'Nice aller-retour',ar:true},{km:532,nom:'Barcelone'},
+  /* Audit du 15/10 : la liste s'arretait a Barcelone (532 km), franchi depuis des semaines : a 830 km
+     le recit restait fige sur la meme phrase. Distances a vol d'oiseau depuis Lyon. */
+  {km:575,nom:'Munich'},{km:749,nom:'Rome'},{km:912,nom:'Madrid'},{km:975,nom:'Berlin'},{km:1388,nom:'Lisbonne'}
 ];
 function _wCapital(nb,km,sem,pr,dplus){
   var atteints=_JALONS.filter(function(j){return km>=j.km;});
@@ -980,7 +983,7 @@ function _wCapital(nb,km,sem,pr,dplus){
          : 'Tu as parcouru la distance <strong>Lyon \u2192 '+dernier.nom+'</strong>');
     recit='<div class="cap-recit"><span class="cap-recit-i">\u{1F5FA}\uFE0F</span>'
       +'<span>'+corps
-      +(suivant?'. Plus que <strong>'+Math.round(suivant.km-km)+' km</strong> pour l\u2019aller-retour.':'.')
+      +(suivant?'. Plus que <strong>'+Math.round(suivant.km-km)+' km</strong> pour '+(suivant.ar?'l\u2019aller-retour Lyon \u2192 Nice':'Lyon \u2192 '+suivant.nom)+'.':'.')
       +'</span></div>';
   }else if(suivant){
     recit='<div class="cap-recit"><span class="cap-recit-i">\u{1F5FA}\uFE0F</span>'
@@ -992,7 +995,7 @@ function _wCapital(nb,km,sem,pr,dplus){
     +'<div class="cap-grid">'
     +'<div class="cap-c"><b>'+Math.round(km)+'</b><span>km courus</span></div>'
     +'<button class="cap-c cap-c-btn" onclick="event.stopPropagation();_ouvrirRecords()"><b>'+pr+'</b><span>records \u203a</span></button>'
-    +'<div class="cap-c"><b>'+sem+'<i>\u{1F525}</i></b><span>semaines</span></div>'
+    +'<div class="cap-c"><b>'+sem+'<i>\u{1F525}</i></b><span>sem. courues</span></div>'
     +'</div>'+recit
     +(everest>=10?'<div class="cap-recit cap-recit-2"><span class="cap-recit-i">\u26F0\uFE0F</span>'
       +'<span><strong>'+everest+' %</strong> de l\u2019Everest grimp\u00e9s depuis le d\u00e9but</span></div>':'')
@@ -2964,6 +2967,15 @@ function debugCockpit(opt){
   if(ss.length){var at=function(d){return ss.reduce(function(a,x){var n=Math.round((d-x.d)/DAY);return n>=0?a+x.l*Math.exp(-n/3.5):a;},0);};
     var fv=[];for(var t=ss[0].d.getTime();t<=today.getTime();t+=DAY){var v=at(new Date(t));if(v>0)fv.push(v);}fv.sort(function(a,b){return a-b;});
     var fl=_fatigueResiduelle(today);if(fl){chk('Fatigue actuelle',Math.round(fl.cur),Math.round(at(today)),1);chk('Fatigue mediane',Math.round(fl.med),Math.round(fv[Math.floor(fv.length/2)]),1);}}
+  /* --- 4b. Widget « Ton capital » de l'accueil --- */
+  try{var capEl=document.querySelector('.wdg-cap .cap-grid');
+    if(capEl){var cb=capEl.querySelectorAll('b');
+      var ckm=0,cpr=0,cdp=0,cw={};faites.forEach(function(x){var r=x.s.realise;ckm+=r.km;cw[x.wk]=1;});
+      all.forEach(function(x){var r=x.s.realise;if(r&&(r.statut==='fait'||r.statut==='partiel')){cpr+=(r.pr||0);cdp+=(r.elevation_gain||0);}});
+      chk('Capital : km courus',+cb[0].textContent,Math.round(ckm),0.5);
+      chk('Capital : records',parseInt(cb[1].textContent,10),cpr,0);
+      chk('Capital : semaines courues',parseInt(cb[2].textContent,10),Object.keys(cw).length,0);
+      var ev=document.querySelector('.cap-recit-2 strong');if(ev)chk('Capital : % Everest',parseInt(ev.textContent,10),Math.round(cdp/8849*100),0);}}catch(e){}
   /* --- 5. Fraicheur des donnees --- */
   var dates=faites.filter(function(x){return x.s.date;}).map(function(x){return x.s.date;}).sort();
   var derniere=dates[dates.length-1];

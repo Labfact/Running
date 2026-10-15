@@ -2651,6 +2651,12 @@ for _wk,_ss in SEANCES_BY_WEEK.items():
         if _r.get("statut") in ("fait","partiel") and _r.get("km") and _se.get("date"):
             HEATMAP[_se["date"]]=HEATMAP.get(_se["date"],0)+_r["km"]
 CHANGELOG=[
+  {"build":252,"date":"15 octobre 2026","sha":"","tag":"Ton capital : le recit avance au-dela de Barcelone","items":[
+    "CORRIGE : le recit de 'Ton capital' restait fige sur 'Lyon -> Barcelone' (532 km) alors que 830 km sont courus ; jalons ajoutes (Munich, Rome, Madrid, Berlin, Lisbonne). Prochain : Madrid, a 82 km.",
+    "CORRIGE : la phrase 'Plus que X km pour l'aller-retour' s'affichait quel que soit le jalon suivant ; elle nomme maintenant la destination.",
+    "AJUSTE : le compteur '16 semaines' est libelle 'sem. courues' (semaines avec au moins une sortie, pas une serie).",
+    "VERIFIE : 830 km, 435 records, 67 % de l'Everest et 16 semaines concordent avec les seances loggees ; debugCockpit() controle desormais ces chiffres.",
+  ]},
   {"build":251,"date":"15 octobre 2026","sha":"","tag":"Audit du Cockpit : graphe d'allure par type corrige, allure facile fiabilisee, debugCockpit()","items":[
     "AUDIT : volume, charge, D+, cadence, ACWR (hebdo et du jour), zones FC et fatigue recalcules a part depuis les donnees brutes : tous concordent avec l'ecran.",
     "CORRIGE : le graphe d'allure par type (EF / AM / Seuil) affichait des donnees de S15-S26 sous les etiquettes S31-S42 ; il est recalcule semaine par semaine.",
