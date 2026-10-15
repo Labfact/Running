@@ -138,6 +138,20 @@ Ne jamais soustraire `new Date('YYYY-MM-DD')` à une date locale. Une course don
 - **Cause racine** : le tiret « — » de la carte d'une séance sautée utilisait `var(--warn)` (#f59e0b) sur `--warn-fond`. Défaut latent, invisible tant qu'aucune séance sautée ne figurait dans la semaine auditée.
 - **Garde-fou** : `var(--warn-deux)` (#b45309, ~4,9:1) pour tout texte sur fond ambre ; `python scripts/audit_a11y.py` en local avant la PR quand on marque une séance `skipped`. Le job `verify` ne donne pas ses logs : rejouer l'audit en local.
 
+## L11 — Cockpit : un graphe figé sous de fausses étiquettes, une allure « facile » polluée (audit du 15/10)
+
+- **Symptôme.** Le graphe « Allure par type » (EF / AM / Seuil) affichait les données de S15-S26 sous les étiquettes
+  S31-S42 : `_ckRebuild` prenait la *fin* d'un tableau figé au lieu de recalculer. Et l'« allure Z2 » de S42 valait 5:14
+  parce que deux séances étiquetées « EF aérobie » (12 et 13/10) avaient été courues à allure marathon, FC 161.
+- **Cause.** Un instantané statique mélangé à des séries vivantes sans que rien ne compare les deux ; et le *type* de la
+  séance (étiquette du plan) pris pour son *intensité réelle*.
+- **Règle.** Une séance n'est « facile » que si sa FC moyenne est ≤ 154 (haut de Z2 dans `ZONES_FC`). Toute série du
+  Cockpit se recalcule depuis `SEANCES_BY_WEEK` ; aucun tableau figé n'est recollé à des étiquettes de semaine.
+- **Garde-fou mécanisé.** `debugCockpit()` (console) recalcule à part chaque série et liste les données périmées
+  (séances « à faire » passées, découplage ancien, RPE ou FC manquants). Le test `T20` de `test_regression.py` échoue au
+  moindre écart. À lancer aussi à la main après un log : `debugCockpit()` dans la console du navigateur (ordinateur).
+- **Reste connu.** Le découplage cardiaque n'est plus calculé depuis le 06/08 (procédure `src/decouplage.py`, streams Strava).
+
 ## Quirks Strava MCP (non mécanisables, à connaître)
 
 - Les activités **privées** n'apparaissent pas dans `list_activities`, quelle que soit

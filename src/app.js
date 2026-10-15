@@ -145,6 +145,8 @@ function prochaineSeance(){
 
 /* ===== Recalcul dynamique des KPI depuis les séances réelles (à chaque chargement) ===== */
 function _weekNumFromKey(k){var m=String(k).match(/(\d+)/);return m?+m[1]:0;}
+/* FC moyenne max d'une seance « facile » = haut de la zone Z2 officielle (ZONES_FC : Z2 134-154). */
+var _FC_FACILE_MAX=154;
 function _reFromSeance(s){
   // 1) champ structuré (fiable, ajouté à chaque log)
   if(s.realise&&typeof s.realise.re==='number')return s.realise.re;
@@ -207,7 +209,7 @@ function _ckRebuild(){
   weeks.forEach(function(wn){
     var arr=SEANCES_BY_WEEK[String(wn)]||SEANCES_BY_WEEK[wn]||[];
     var km=0,re=0,dplus=0,fcSum=0,fcN=0,cadSum=0,cadN=0,paceSum=0,paceN=0,hasReal=false;
-    var efPaces=[],decoups=[],zoneMin={Z1:0,Z2:0,Z3:0,'Z4+':0};
+    var efPaces=[],amPaces=[],sePaces=[],decoups=[],zoneMin={Z1:0,Z2:0,Z3:0,'Z4+':0};
     arr.forEach(function(s){
       var r=s.realise;
       if(r&&(r.statut==='fait'||r.statut==='partiel')&&r.km){
@@ -226,8 +228,17 @@ function _ckRebuild(){
           // Allure Z2 : uniquement les seances faciles (EF / footing / recuperation)
           var _t=((s.type||'')+' '+(s.titre||'')).toLowerCase();
           var _facile=(s.cat==='EF'||s.cat==='ef'||/\bef\b|footing|a[ée]robie|r[ée]cup/.test(_t))
-                      && !/seuil|vma|tempo|fractionn|c[ôo]tes|sp[ée]cifique|vitesse|intervalle/.test(_t);
+                      && !/seuil|vma|tempo|fractionn|c[ôo]tes|sp[ée]cifique|vitesse|intervalle/.test(_t)
+                      && !(r.fc_moy&&r.fc_moy>_FC_FACILE_MAX);
+          /* AUDIT 15/10 : le type EF ne suffit pas. Le 12 et le 13/10, deux seances etiquetees
+             « EF » ont ete courues a allure marathon (FC 161) : la mediane « allure Z2 » de S42 etait
+             5:14 au lieu de 5:54. Une seance n'est facile que si sa FC moyenne reste en Z2. */
           if(_facile)efPaces.push(_ps);
+          /* Allure par type : etait un instantane S15-S26 recolle sous les etiquettes S31-S42. */
+          if(!/longue|course|semi-marathon/.test(_t)){
+            if(/seuil|tempo/.test(_t))sePaces.push(_ps);
+            else if(/allure marathon|sp[ée]cifique marathon|\bam\b/.test(_t))amPaces.push(_ps);
+          }
         }}
         // Derive cardiaque : on reprend le KPI decouplage valide, calcule au log
         if(r.decouplage&&r.decouplage.qualite==='fiable'&&typeof r.decouplage.pct==='number')decoups.push(r.decouplage.pct);
@@ -242,6 +253,8 @@ function _ckRebuild(){
     var _med=function(a){if(!a.length)return null;var b=a.slice().sort(function(x,y){return x-y;}),n=b.length,h=Math.floor(n/2);return (n%2)?b[h]:(b[h-1]+b[h])/2;};
     if(hasReal)agg[wn]={km:+km.toFixed(1),re:re,dplus:dplus,fc:fcN?Math.round(fcSum/fcN):null,cad:cadN?Math.round(cadSum/cadN):null,pace:paceN?Math.round(paceSum/paceN):null,
       z2:_med(efPaces)?Math.round(_med(efPaces)):null,
+      am:_med(amPaces)?Math.round(_med(amPaces)):null,
+      se:_med(sePaces)?Math.round(_med(sePaces)):null,
       dc:decoups.length?Math.round(_med(decoups)*100)/100:null,
       zoneMin:zoneMin};
   });
@@ -309,7 +322,7 @@ function _ckRebuild(){
                            ['Z3','#f59e0b',Math.round(Z.Z3/tot*100)],['Z4+','#ef4444',Math.round(Z['Z4+']/tot*100)]];
     }
     if(_CK.CAD)_CK.CAD[N]={w:lbl,v:ws.map(function(w){return _val('CAD','v',w,agg[w]&&agg[w].cad);})};
-    if(_CK.PACE){var _pp=(_CK._PACE_ORIG&&_CK._PACE_ORIG[N])||{};var _L=lbl.length;var _tail=function(a){return Array.isArray(a)?a.slice(-_L):a;};_CK.PACE[N]={w:lbl,v:ws.map(function(w){return agg[w]?agg[w].pace:null;}),ef:_tail(_pp.ef),am:_tail(_pp.am),se:_tail(_pp.se)};}
+    if(_CK.PACE){var _pp=(_CK._PACE_ORIG&&_CK._PACE_ORIG[N])||{};var _L=lbl.length;var _tail=function(a){return Array.isArray(a)?a.slice(-_L):a;};_CK.PACE[N]={w:lbl,v:ws.map(function(w){return agg[w]?agg[w].pace:null;}),ef:ws.map(function(w){return agg[w]?agg[w].z2:null;}),am:ws.map(function(w){return agg[w]?agg[w].am:null;}),se:ws.map(function(w){return agg[w]?agg[w].se:null;})};}
   });
   // ACWR_DATA realigne sur la SEULE definition retenue (fenetre glissante
   // 7/28 jours via _acwrCompute). Auparavant ce bloc recalculait sur les
@@ -544,7 +557,7 @@ function computeFormeScore(){
     if(/seuil|vma|tempo|fractionn|c[ôo]tes|sp[ée]cifique|vitesse|intervalle/.test(t))return;
     if(!(s.cat==='EF'||s.cat==='ef'||/\bef\b|footing|a[ée]robie|r[ée]cup/.test(t)))return;
     const p=r.allure.replace('/km','').split(':');
-    if(p.length!==2||!r.fc_moy)return;
+    if(p.length!==2||!r.fc_moy||r.fc_moy>_FC_FACILE_MAX)return;
     const pace=+p[0]*60+(+p[1]||0);
     if(!pace)return;
     // efficience = vitesse (m/s) par battement ; plus c'est haut, mieux c'est
@@ -2887,6 +2900,95 @@ function _ckSummary(){
     return pts.slice(0,3);
   }catch(e){return [];}
 }
+/* ===== DEBOGUEUR DU COCKPIT (console) =====
+   debugCockpit()          -> recalcule a part, depuis SEANCES_BY_WEEK, chaque chiffre du Cockpit et le
+                              compare a la valeur affichee ; liste aussi les donnees perimees.
+   debugCockpit({verbose}) -> affiche aussi les controles reussis.
+   Retourne {ok, ecarts, alertes, controles}. Aucun effet sur l'app : lecture seule.
+   Ne repose PAS sur _ckRebuild/_acwrCompute : meme definitions, autre code, pour que l'ecart se voie. */
+function debugCockpit(opt){
+  opt=opt||{};
+  var out={ok:true,controles:[],ecarts:[],alertes:[]},DAY=86400000;
+  var today=new Date();today.setHours(0,0,0,0);
+  function chk(nom,affiche,attendu,tol){
+    var ok=(affiche==null&&attendu==null)||(typeof affiche==='number'&&typeof attendu==='number'&&Math.abs(affiche-attendu)<=(tol||0.011));
+    var c={nom:nom,affiche:affiche,attendu:attendu,ok:ok};out.controles.push(c);if(!ok){out.ecarts.push(c);out.ok=false;}
+  }
+  function alerte(msg){out.alertes.push(msg);}
+  var all=[];Object.keys(SEANCES_BY_WEEK).forEach(function(w){(SEANCES_BY_WEEK[w]||[]).forEach(function(s){all.push({wk:parseInt(String(w).replace(/\D/g,''),10),s:s});});});
+  var faites=all.filter(function(x){var r=x.s.realise;return r&&(r.statut==='fait'||r.statut==='partiel')&&r.km;});
+  var reOf=function(s){var r=s.realise;if(typeof r.re==='number')return r.re;var m=(r.commentaire||'').match(/RE\s+(\d+)/);return m?+m[1]:_reFromSeance(s);};
+  var minOf=function(t){var m;t=String(t||'').replace(/\([^)]*\)/g,'').trim();
+    if(m=/^(\d+):(\d{2}):(\d{2})$/.exec(t))return +m[1]*60+ +m[2]+ +m[3]/60;
+    if(m=/^(\d+)h(\d+)?:?(\d+)?$/.exec(t))return +m[1]*60+ +(m[2]||0)+ +(m[3]||0)/60;
+    if(m=/^(\d+):(\d+)$/.exec(t))return +m[1]+ +m[2]/60;return null;};
+  var paceOf=function(a){var m=/(\d+):(\d+)/.exec(a||'');return m?+m[1]*60+ +m[2]:null;};
+  var med=function(a){if(!a.length)return null;var b=a.slice().sort(function(x,y){return x-y;}),n=b.length,h=Math.floor(n/2);return n%2?b[h]:(b[h-1]+b[h])/2;};
+  /* --- 1. ACWR du jour (7 j / moyenne 28 j) --- */
+  var c7=0,c28=0;faites.forEach(function(x){if(!x.s.date)return;var j=Math.round((today-new Date(x.s.date+'T00:00:00'))/DAY);if(j<0)return;if(j<=6)c7+=reOf(x.s);if(j<=27)c28+=reOf(x.s);});
+  var acwr=c28>0?+(c7/(c28/4)).toFixed(2):null;
+  var live=_acwrCompute();chk('ACWR du jour',live.acwr,acwr);chk('Charge 7 j',live.c7,c7);chk('Charge 28 j',live.c28,c28);
+  chk('ACWR_DATA = ACWR du jour',ACWR_DATA.acwr,acwr);
+  var elA=document.getElementById('ck-acwr-val');if(elA&&elA.textContent)chk('ACWR affiche (carte)',+elA.textContent,acwr);
+  /* --- 2. Series hebdo de la fenetre 12 --- */
+  var W=(_CK.VOL&&_CK.VOL[12])?_CK.VOL[12].w.map(function(l){return +String(l).replace('S','');}):[];
+  var j4=new Date(2026,0,4),mon1=new Date(j4.getTime()-((j4.getDay()+6)%7)*DAY);
+  W.forEach(function(w,i){
+    var rs=faites.filter(function(x){return x.wk===w;});
+    var km=rs.reduce(function(a,x){return a+x.s.realise.km;},0),re=rs.reduce(function(a,x){return a+reOf(x.s);},0);
+    var dp=rs.reduce(function(a,x){return a+(x.s.realise.elevation_gain||0);},0);
+    var cad=rs.map(function(x){var c=x.s.realise.cadence;return typeof c==='number'?(c<120?c*2:c):null;}).filter(function(v){return v!=null;});
+    var has=rs.length>0;
+    chk('Volume S'+w,_CK.VOL[12].a[i],has?+km.toFixed(1):null,0.06);
+    chk('Charge S'+w,_CK.RE[12].v[i],has?re:null);
+    chk('D+ S'+w,_CK.DPLUS[12].v[i],has?dp:null);
+    chk('Cadence S'+w,_CK.CAD[12].v[i],has&&cad.length?Math.round(cad.reduce(function(a,b){return a+b;},0)/cad.length):null,1);
+    if(has){var end=new Date(mon1.getTime()+((w-1)*7+6)*DAY);if(end>today)end=today;var a7=0,a28=0;
+      faites.forEach(function(x){if(!x.s.date)return;var j=Math.round((end-new Date(x.s.date+'T00:00:00'))/DAY);if(j<0)return;if(j<=6)a7+=reOf(x.s);if(j<=27)a28+=reOf(x.s);});
+      chk('ACWR S'+w,_CK.ACWR[12].v[i],a28>0?+(a7/(a28/4)).toFixed(2):null);}
+    /* allure facile : FC moyenne <= 154, sinon la seance n'est pas facile */
+    var fac=rs.filter(function(x){var s=x.s,r=s.realise,t=((s.type||'')+' '+(s.titre||'')).toLowerCase();
+      return paceOf(r.allure)&&(s.cat==='EF'||s.cat==='ef'||/\bef\b|footing|a[ée]robie|r[ée]cup/.test(t))&&!/seuil|vma|tempo|fractionn|c[ôo]tes|sp[ée]cifique|vitesse|intervalle/.test(t)&&!(r.fc_moy&&r.fc_moy>154);})
+      .map(function(x){return paceOf(x.s.realise.allure);});
+    chk('Allure facile S'+w,_CK.Z2[12].v[i],fac.length?Math.round(med(fac)):null,1);
+    chk('Allure facile (graphe type) S'+w,_CK.PACE[12].ef[i],fac.length?Math.round(med(fac)):null,1);
+  });
+  /* --- 3. Zones FC (fenetre 12) --- */
+  var Z={Z1:0,Z2:0,Z3:0,'Z4+':0},tot=0;
+  faites.forEach(function(x){if(W.indexOf(x.wk)<0)return;var r=x.s.realise,m=minOf(r.temps);if(!r.fc_moy||!m)return;
+    var z=r.fc_moy<134?'Z1':r.fc_moy<154?'Z2':r.fc_moy<167?'Z3':'Z4+';Z[z]+=m;tot+=m;});
+  if(tot&&_CK.FCZ&&_CK.FCZ[12])['Z1','Z2','Z3','Z4+'].forEach(function(k,i){chk('Zone '+k+' (12 sem.)',_CK.FCZ[12][i][2],Math.round(Z[k]/tot*100),1);});
+  /* --- 4. Fraicheur (fatigue sRPE) --- */
+  var ss=faites.filter(function(x){return x.s.date;}).map(function(x){var r=x.s.realise,m=minOf(r.temps);
+    return {d:new Date(x.s.date+'T00:00:00'),l:(m&&r.rpe_ressenti)?r.rpe_ressenti*m:reOf(x.s)*1.8};}).sort(function(a,b){return a.d-b.d;});
+  if(ss.length){var at=function(d){return ss.reduce(function(a,x){var n=Math.round((d-x.d)/DAY);return n>=0?a+x.l*Math.exp(-n/3.5):a;},0);};
+    var fv=[];for(var t=ss[0].d.getTime();t<=today.getTime();t+=DAY){var v=at(new Date(t));if(v>0)fv.push(v);}fv.sort(function(a,b){return a-b;});
+    var fl=_fatigueResiduelle(today);if(fl){chk('Fatigue actuelle',Math.round(fl.cur),Math.round(at(today)),1);chk('Fatigue mediane',Math.round(fl.med),Math.round(fv[Math.floor(fv.length/2)]),1);}}
+  /* --- 5. Fraicheur des donnees --- */
+  var dates=faites.filter(function(x){return x.s.date;}).map(function(x){return x.s.date;}).sort();
+  var derniere=dates[dates.length-1];
+  if(derniere){var age=Math.round((today-new Date(derniere+'T00:00:00'))/DAY);if(age>3)alerte('Derniere seance loggee il y a '+age+' jours ('+derniere+') : donnees possiblement en retard sur Strava.');}
+  all.forEach(function(x){var s=x.s,r=s.realise||{};
+    if(s.date&&r.statut==='a_faire'&&new Date(s.date+'T00:00:00')<today)alerte('S'+x.wk+'-'+s.id+' ('+s.date+') toujours « a faire » alors que la date est passee.');
+    if((r.statut==='fait'||r.statut==='partiel')&&r.km){
+      if(!r.fc_moy)alerte('S'+x.wk+'-'+s.id+' : pas de FC moyenne.');
+      if(typeof r.re!=='number')alerte('S'+x.wk+'-'+s.id+' : pas d\'effort relatif structure (repli sur estimation).');
+      if(!r.rpe_ressenti)alerte('S'+x.wk+'-'+s.id+' : pas de RPE (la fatigue retombe sur RE x 1,8).');
+      if(!minOf(r.temps))alerte('S'+x.wk+'-'+s.id+' : temps « '+r.temps+' » illisible (fatigue estimee).');}});
+  var dc=faites.filter(function(x){return x.s.realise.decouplage&&x.s.date;}).map(function(x){return x.s.date;}).sort();
+  if(dc.length){var ad=Math.round((today-new Date(dc[dc.length-1]+'T00:00:00'))/DAY);
+    if(ad>14)alerte('Derive cardiaque (decouplage) : derniere valeur du '+dc[dc.length-1]+' ('+ad+' jours) — les seances plus recentes n\'ont pas ete analysees, la carte « Derniere sortie analysee » est perimee.');}
+  else alerte('Aucun decouplage enregistre.');
+  var nb=faites.length;var elS=document.querySelector('.acc-stat .av');
+  if(typeof SAISON2026!=='undefined')alerte('Info : SAISON2026 = '+SAISON2026.sorties+' sorties / '+SAISON2026.km+' km (source Strava, instantane du build) ; plan = '+nb+' sorties logguees.');
+  if(typeof console!=='undefined'){
+    console.log('%cdebugCockpit : '+(out.ok?'OK':out.ecarts.length+' ECART(S)')+' · '+out.controles.length+' controles · '+out.alertes.length+' alerte(s)','font-weight:bold;color:'+(out.ok?'#16a34a':'#ef4444'));
+    if(out.ecarts.length&&console.table)console.table(out.ecarts);
+    else if(opt.verbose&&console.table)console.table(out.controles);
+    out.alertes.forEach(function(a){console.warn('• '+a);});}
+  return out;
+}
+if(typeof window!=='undefined')window.debugCockpit=debugCockpit;
 function _vo2Reveal(force){
   const v=_estimVO2();if(!v)return;
   const arc=document.getElementById('vo2-arc'),val=document.getElementById('vo2-val'),foot=document.getElementById('vo2-foot');

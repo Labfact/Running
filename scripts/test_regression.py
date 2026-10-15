@@ -478,6 +478,24 @@ def run():
             except Exception as e:
                 check(f"T19 {iso_date[:10]}", False, str(e)[:120])
 
+        # ── T20 : le Cockpit affiche ce que les donnees brutes donnent (debugCockpit) ──
+        # Recalcule a part chaque serie (volume, charge, D+, cadence, ACWR, allure facile, zones FC,
+        # fatigue) et compare a la valeur affichee. Ne couvre pas la fraicheur des donnees (alertes).
+        try:
+            pd = b.new_page(viewport={"width": 390, "height": 844})
+            pd.goto(HTML, wait_until="load", timeout=20000)
+            pd.wait_for_timeout(1200)
+            pd.evaluate("showTab('cockpit')")
+            pd.wait_for_timeout(500)
+            dbg = pd.evaluate("debugCockpit()")
+            ec = dbg.get("ecarts", [])
+            check("T20 Cockpit : valeurs affichees = recalcul independant (%d controles)" % len(dbg.get("controles", [])),
+                  dbg.get("ok") is True,
+                  "; ".join("%s: affiche %s, attendu %s" % (e["nom"], e["affiche"], e["attendu"]) for e in ec[:3]))
+            pd.close()
+        except Exception as e:
+            check("T20 debugCockpit", False, str(e)[:120])
+
         # ── T13 : pas d'erreur JS accumulee sur tout le parcours ──
         check("T13 zero erreur JS sur tout le parcours", len(js_errors) == 0,
               "; ".join(js_errors[:3]))

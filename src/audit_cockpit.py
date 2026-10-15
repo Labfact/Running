@@ -143,7 +143,9 @@ def est_facile(s):
     t = ((s.get('type') or '') + ' ' + (s.get('titre') or '')).lower()
     dur = re.search(r'seuil|vma|tempo|fractionn|c[ôo]tes|sp[ée]cifique|vitesse|intervalle', t)
     fac = s.get('cat') in ('EF', 'ef') or re.search(r'\bef\b|footing|a[ée]robie|r[ée]cup', t)
-    return bool(fac) and not bool(dur)
+    # Audit du 15/10 : le type ne suffit pas, une seance « EF » courue a FC 161 n'est pas facile.
+    fc = (s.get('realise') or {}).get('fc_moy')
+    return bool(fac) and not bool(dur) and not (fc and fc > 154)
 
 
 # ------------------------------------------------------------ verite terrain

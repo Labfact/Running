@@ -2651,6 +2651,13 @@ for _wk,_ss in SEANCES_BY_WEEK.items():
         if _r.get("statut") in ("fait","partiel") and _r.get("km") and _se.get("date"):
             HEATMAP[_se["date"]]=HEATMAP.get(_se["date"],0)+_r["km"]
 CHANGELOG=[
+  {"build":251,"date":"15 octobre 2026","sha":"","tag":"Audit du Cockpit : graphe d'allure par type corrige, allure facile fiabilisee, debugCockpit()","items":[
+    "AUDIT : volume, charge, D+, cadence, ACWR (hebdo et du jour), zones FC et fatigue recalcules a part depuis les donnees brutes : tous concordent avec l'ecran.",
+    "CORRIGE : le graphe d'allure par type (EF / AM / Seuil) affichait des donnees de S15-S26 sous les etiquettes S31-S42 ; il est recalcule semaine par semaine.",
+    "CORRIGE : l'allure facile (Z2) et l'efficience ne retiennent plus que les seances a FC moyenne <= 154 ; S42 passait a 5:14 a cause de deux seances courues a allure marathon (5:54 reel).",
+    "AJOUTE : debugCockpit() dans la console (recalcul independant, ecarts, donnees perimees) et test T20 de regression.",
+    "CONNU : le decouplage cardiaque n'a plus ete calcule depuis le 06/08 ; la carte 'Derniere sortie analysee' est perimee.",
+  ]},
   {"build":250,"date":"15 octobre 2026","sha":"","tag":"S42-4 : nutrition de la longue notee","items":[
     "DONNEE : nutrition de la longue du 15/10 ajoutee : 3 gels (45 min, 1h30, 2h15, le 3e difficile), 1 electrolyte Fort Endurance au depart, environ 1,5 L, petit-dejeuner banane/proteines/cafe 1h30 avant.",
     "ANALYSE : en dessous de la cible 60-90 g de glucides/h et de la consigne de boire toutes les 15-20 min ; a travailler avant Nice (gel supporte au-dela de 2h).",
